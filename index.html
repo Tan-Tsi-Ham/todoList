@@ -135,6 +135,25 @@
             min-height: 500px;
         }
 
+        .footer {
+            padding: 16px 24px;
+            text-align: center;
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .footer a {
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
         .page {
             display: none;
         }
@@ -214,6 +233,11 @@
         .btn-icon.danger:hover {
             background: var(--danger-light);
             color: var(--danger);
+        }
+
+        .btn-icon.home-active {
+            background: var(--primary-light);
+            color: var(--primary);
         }
 
         .task-card {
@@ -576,7 +600,26 @@
             }
 
             .header {
-                padding: 24px 16px;
+                padding: 20px 16px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .header-actions {
+                position: static;
+                order: 1;
+            }
+
+            .header-actions .btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .header-content {
+                order: 2;
+                text-align: center;
             }
 
             .header h1 {
@@ -604,14 +647,17 @@
                 <button class="btn btn-secondary" onclick="exportData()">📤 导出数据</button>
                 <button class="btn btn-secondary" onclick="openImportModal()">📥 导入数据</button>
             </div>
-            <h1>📝 TodoList</h1>
-            <p>高效管理你的每一天</p>
+            <div class="header-content">
+                <h1>📝 任务界面</h1>
+                <p>先完成再完美。</p>
+                <p>状态不太好的话，尽量能做多少做多少。</p>
+            </div>
         </div>
 
         <nav class="nav">
             <button class="nav-tab active" data-page="home">🏠 今日任务</button>
-            <button class="nav-tab" data-page="groups">📁 任务组</button>
-            <button class="nav-tab" data-page="history">📜 历史记录</button>
+            <button class="nav-tab" data-page="groups">📁 近期任务</button>
+            <button class="nav-tab" data-page="history">📜 过往任务</button>
         </nav>
 
         <div class="content">
@@ -644,6 +690,9 @@
                 <div id="history-tasks"></div>
             </div>
         </div>
+        <div class="footer">
+            <a href="https://github.com/Tan-Tsi-Ham/todoList" target="_blank" rel="noopener noreferrer">📦 点击查看使用方法和简介@Tan-Tsi-Ham</a>
+        </div>
     </div>
 
     <div class="modal-overlay" id="task-modal">
@@ -666,15 +715,9 @@
                         <label class="form-label">所属任务组 *</label>
                         <select class="form-select" id="task-group" required></select>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">开始时间</label>
-                            <input type="datetime-local" class="form-input" id="task-start">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">结束时间</label>
-                            <input type="datetime-local" class="form-input" id="task-end">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">截止时间</label>
+                        <input type="datetime-local" class="form-input" id="task-end">
                     </div>
                     <div class="form-group">
                         <label class="form-label">重复周期</label>
@@ -800,9 +843,9 @@
             loadData();
             if (taskGroups.length === 0) {
                 taskGroups = [
-                    { id: generateId(), name: '工作', order: 0, createdAt: new Date().toISOString(), collapsed: true },
-                    { id: generateId(), name: '生活', order: 1, createdAt: new Date().toISOString(), collapsed: true },
-                    { id: generateId(), name: '学习', order: 2, createdAt: new Date().toISOString(), collapsed: true }
+                    { id: generateId(), name: '工作', order: 0, createdAt: new Date().toISOString(), collapsed: true, movedToHistory: false },
+                    { id: generateId(), name: '生活', order: 1, createdAt: new Date().toISOString(), collapsed: true, movedToHistory: false },
+                    { id: generateId(), name: '学习', order: 2, createdAt: new Date().toISOString(), collapsed: true, movedToHistory: false }
                 ];
                 saveData();
             }
@@ -974,7 +1017,7 @@
         function renderHomePage() {
             const container = document.getElementById('home-tasks');
             const todayTasks = tasks
-                .filter(t => t.showOnHome)
+                .filter(t => t.showOnHome && !t.movedToHistory)
                 .sort((a, b) => a.order - b.order);
 
             if (todayTasks.length === 0) {
@@ -1017,6 +1060,12 @@
                         </div>
                         <div class="task-actions">
                             <button class="btn btn-icon" onclick="openTaskModal('${task.id}')">✏️</button>
+                            <button class="btn btn-icon ${task.showOnHome ? 'home-active' : ''}" 
+                                    onclick="toggleShowOnHome('${task.id}')" 
+                                    title="${task.showOnHome ? '从今日任务隐藏' : '在今日任务显示'}">
+                                🏠
+                            </button>
+                            ${task.completed ? `<button class="btn btn-icon" onclick="moveToHistory('${task.id}')" title="移入历史">📜</button>` : ''}
                             <button class="btn btn-icon danger" onclick="deleteTask('${task.id}')">🗑️</button>
                         </div>
                     </div>
@@ -1050,7 +1099,9 @@
 
         function renderGroupsPage() {
             const container = document.getElementById('groups-list');
-            const sortedGroups = [...taskGroups].sort((a, b) => a.order - b.order);
+            const sortedGroups = [...taskGroups]
+                .filter(group => !group.movedToHistory)
+                .sort((a, b) => a.order - b.order);
 
             if (sortedGroups.length === 0) {
                 container.innerHTML = `
@@ -1064,7 +1115,7 @@
 
             container.innerHTML = sortedGroups.map(group => {
                 const groupTasks = tasks
-                    .filter(t => t.groupId === group.id)
+                    .filter(t => t.groupId === group.id && !t.movedToHistory)
                     .sort((a, b) => a.order - b.order);
                 const isCollapsed = group.collapsed !== false;
                 const completedCount = groupTasks.filter(t => t.completed).length;
@@ -1081,6 +1132,7 @@
                             <div class="group-actions" onclick="event.stopPropagation()">
                                 <button class="btn btn-primary" onclick="openTaskModal(null, '${group.id}')">➕</button>
                                 <button class="btn btn-icon" onclick="openGroupModal('${group.id}')">✏️</button>
+                                <button class="btn btn-icon" onclick="moveGroupToHistory('${group.id}')" title="移入历史">📜</button>
                                 <button class="btn btn-icon danger" onclick="deleteGroup('${group.id}')">🗑️</button>
                             </div>
                         </div>
@@ -1105,20 +1157,110 @@
             const container = document.getElementById('history-tasks');
             const now = new Date();
             const historyTasks = tasks
-                .filter(t => t.endTime && new Date(t.endTime) < now && !t.completed)
-                .sort((a, b) => new Date(b.endTime) - new Date(a.endTime));
+                .filter(t => {
+                    const group = t.groupId ? taskGroups.find(g => g.id === t.groupId) : null;
+                    return (t.endTime && new Date(t.endTime) < now && !t.completed) || 
+                           t.movedToHistory || 
+                           (group && group.movedToHistory);
+                });
 
             if (historyTasks.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">✨</div>
-                        <div class="empty-state-text">没有过期任务，做得很好！</div>
+                        <div class="empty-state-text">没有历史任务，做得很好！</div>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = historyTasks.map(task => renderTaskCard(task)).join('');
+            const movedGroups = taskGroups.filter(g => g.movedToHistory);
+            const tasksByGroup = {};
+            
+            movedGroups.forEach(group => {
+                const groupTasks = tasks.filter(t => t.groupId === group.id);
+                if (groupTasks.length > 0) {
+                    tasksByGroup[group.id] = groupTasks;
+                }
+            });
+
+            historyTasks.forEach(task => {
+                if (!task.groupId || !taskGroups.find(g => g.id === task.groupId)?.movedToHistory) {
+                    const groupId = task.groupId || 'ungrouped';
+                    if (!tasksByGroup[groupId]) {
+                        tasksByGroup[groupId] = [];
+                    }
+                    if (!tasksByGroup[groupId].find(t => t.id === task.id)) {
+                        tasksByGroup[groupId].push(task);
+                    }
+                }
+            });
+
+            const groupIds = Object.keys(tasksByGroup).sort((a, b) => {
+                if (a === 'ungrouped') return 1;
+                if (b === 'ungrouped') return -1;
+                const groupA = taskGroups.find(g => g.id === a);
+                const groupB = taskGroups.find(g => g.id === b);
+                return (groupA?.order || 0) - (groupB?.order || 0);
+            });
+
+            container.innerHTML = groupIds.map(groupId => {
+                const group = groupId === 'ungrouped' ? null : taskGroups.find(g => g.id === groupId);
+                const groupTasks = tasksByGroup[groupId].sort((a, b) => new Date(b.endTime || b.createdAt) - new Date(a.endTime || a.createdAt));
+                const completedCount = groupTasks.filter(t => t.completed).length;
+                return `
+                    <div class="group-card collapsed" data-group-id="${groupId}">
+                        <div class="group-header" onclick="toggleHistoryGroupCollapse('${groupId}')">
+                            <div class="group-title-wrapper">
+                                <span class="collapse-icon">▼</span>
+                                <h3 class="group-title">${escapeHtml(group?.name || '未分组')}</h3>
+                                <span style="font-size: 12px; color: var(--gray-400); margin-left: 8px;">
+                                    (${completedCount}/${groupTasks.length})
+                                </span>
+                            </div>
+                            <div class="group-actions" onclick="event.stopPropagation()">
+                                <button class="btn btn-primary" onclick="moveGroupOutOfHistory('${groupId}')" title="移出历史">↩️</button>
+                            </div>
+                        </div>
+                        <div class="group-tasks" data-group-id="${groupId}">
+                            ${groupTasks.map(task => `
+                                <div class="task-card ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                                    <div class="task-header">
+                                        <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                                             onclick="toggleTask('${task.id}')"></div>
+                                        <div class="task-content">
+                                            <div class="task-title">${escapeHtml(task.title)}</div>
+                                            <div class="task-meta">
+                                                ${task.endTime ? `
+                                                    <span class="task-due">
+                                                        ⏰ ${formatDateTime(task.endTime)}
+                                                    </span>
+                                                ` : ''}
+                                                ${task.completed && task.movedToHistory ? `
+                                                    <span class="task-meta-item">📜 已移入历史</span>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="task-actions">
+                                            <button class="btn btn-icon" onclick="openTaskModal('${task.id}')">✏️</button>
+                                            <button class="btn btn-icon" onclick="moveOutOfHistory('${task.id}')" title="移出历史">↩️</button>
+                                            <button class="btn btn-icon danger" onclick="deleteTask('${task.id}')">🗑️</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleHistoryGroupCollapse(groupId) {
+            const container = document.getElementById('history-tasks');
+            const groupCard = container.querySelector(`.group-card[data-group-id="${groupId}"]`);
+            if (groupCard) {
+                groupCard.classList.toggle('collapsed');
+            }
         }
 
         function setupTaskDrag(container) {
@@ -1261,7 +1403,6 @@
                     document.getElementById('task-title').value = task.title;
                     document.getElementById('task-description').value = task.description || '';
                     document.getElementById('task-group').value = task.groupId;
-                    document.getElementById('task-start').value = task.startTime ? formatLocalDateTime(task.startTime) : '';
                     document.getElementById('task-end').value = task.endTime ? formatLocalDateTime(task.endTime) : '';
                     const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
                     document.querySelector(`input[name="task-repeat"][value="${repeatType}"]`).checked = true;
@@ -1296,7 +1437,6 @@
             const title = document.getElementById('task-title').value.trim();
             const description = document.getElementById('task-description').value.trim();
             const groupId = document.getElementById('task-group').value;
-            const startTime = document.getElementById('task-start').value;
             const endTime = document.getElementById('task-end').value;
             const repeatType = document.querySelector('input[name="task-repeat"]:checked').value;
             const showOnHome = document.getElementById('task-show-home').checked;
@@ -1327,7 +1467,6 @@
                     task.title = title;
                     task.description = description;
                     task.groupId = groupId;
-                    task.startTime = startTime ? new Date(startTime).toISOString() : null;
                     task.endTime = endTime ? new Date(endTime).toISOString() : null;
                     task.repeatType = repeatType;
                     task.repeatDays = repeatDays.length > 0 ? repeatDays : undefined;
@@ -1342,7 +1481,6 @@
                     title,
                     description,
                     groupId,
-                    startTime: startTime ? new Date(startTime).toISOString() : null,
                     endTime: endTime ? new Date(endTime).toISOString() : null,
                     repeatType,
                     repeatDays: repeatDays.length > 0 ? repeatDays : undefined,
@@ -1362,10 +1500,83 @@
         function toggleTask(taskId) {
             const task = tasks.find(t => t.id === taskId);
             if (task) {
+                if (!task.completed && !checkCanStart(task)) {
+                    alert('上一个任务尚未完成，无法完成此任务');
+                    return;
+                }
                 task.completed = !task.completed;
+                if (!task.completed && task.movedToHistory) {
+                    task.movedToHistory = false;
+                }
                 saveData();
                 render();
             }
+        }
+
+        function toggleShowOnHome(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.showOnHome = !task.showOnHome;
+                saveData();
+                render();
+            }
+        }
+
+        function moveToHistory(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.movedToHistory = true;
+                saveData();
+                render();
+            }
+        }
+
+        function moveGroupToHistory(groupId) {
+            if (confirm('确定要将这个任务组移入历史吗？')) {
+                const group = taskGroups.find(g => g.id === groupId);
+                if (group) {
+                    group.movedToHistory = true;
+                    tasks.forEach(task => {
+                        if (task.groupId === groupId) {
+                            task.movedToHistory = true;
+                        }
+                    });
+                    saveData();
+                    render();
+                }
+            }
+        }
+
+        function moveOutOfHistory(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.groupId) {
+                const group = taskGroups.find(g => g.id === task.groupId);
+                if (group && group.movedToHistory) {
+                    if (confirm('该任务属于已移入历史的任务组，确定要将整个任务组移出历史吗？')) {
+                        moveGroupOutOfHistory(task.groupId);
+                    }
+                    return;
+                }
+            }
+            if (task) {
+                task.movedToHistory = false;
+                saveData();
+                render();
+            }
+        }
+
+        function moveGroupOutOfHistory(groupId) {
+            const group = taskGroups.find(g => g.id === groupId);
+            if (group) {
+                group.movedToHistory = false;
+            }
+            tasks.forEach(task => {
+                if (task.groupId === groupId) {
+                    task.movedToHistory = false;
+                }
+            });
+            saveData();
+            render();
         }
 
         function deleteTask(taskId) {
@@ -1418,7 +1629,8 @@
                     name,
                     order: maxOrder + 1,
                     createdAt: new Date().toISOString(),
-                    collapsed: true
+                    collapsed: true,
+                    movedToHistory: false
                 });
             }
 

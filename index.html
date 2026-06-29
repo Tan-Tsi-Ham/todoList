@@ -971,13 +971,12 @@
                 localStorage.setItem('lastDailyRefresh', todayStr);
             }
 
-            const lastWeeklyRefresh = localStorage.getItem('lastWeeklyRefresh');
-            const todayWeeklyKey = todayStr + '-' + currentDayKey;
-            
-            if (lastWeeklyRefresh !== todayWeeklyKey) {
+            const lastWeeklyRefreshDate = localStorage.getItem('lastWeeklyRefreshDate');
+
+            if (lastWeeklyRefreshDate !== todayStr) {
                 tasks.forEach(task => {
                     const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
-                    if (repeatType === 'weekly' && task.completed) {
+                    if (repeatType === 'weekly') {
                         const repeatDays = task.repeatDays || ['mon'];
                         if (repeatDays.includes(currentDayKey)) {
                             task.completed = false;
@@ -985,7 +984,7 @@
                     }
                 });
                 saveData();
-                localStorage.setItem('lastWeeklyRefresh', todayWeeklyKey);
+                localStorage.setItem('lastWeeklyRefreshDate', todayStr);
             }
         }
 

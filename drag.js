@@ -134,7 +134,7 @@ function handleTouchMove(e) {
     if (e.touches.length !== 1) return;
     const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
     const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-    if (deltaX > 10 || deltaY > 10) {
+    if (deltaX > 10 && deltaX > deltaY * 1.5) {
         touchDragging = true;
         e.preventDefault();
     }

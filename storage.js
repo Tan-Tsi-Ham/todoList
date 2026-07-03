@@ -21,7 +21,7 @@ function migrateOldData() {
     let migrated = false;
     
     tasks.forEach(task => {
-        if (!task.taskDate && task.showOnHome) {
+        if (task.taskDate === undefined && task.showOnHome) {
             task.taskDate = today;
             migrated = true;
         }

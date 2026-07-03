@@ -130,7 +130,7 @@ function saveTask() {
     const title = document.getElementById('task-title').value.trim();
     const description = document.getElementById('task-description').value.trim();
     const groupId = document.getElementById('task-group').value;
-    const taskDate = document.getElementById('task-date').value;
+    const taskDate = document.getElementById('task-date').value || null;
     const endTime = document.getElementById('task-end').value;
     const repeatType = document.querySelector('input[name="task-repeat"]:checked').value;
     const taskId = editingTaskId;

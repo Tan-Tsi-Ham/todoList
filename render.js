@@ -6,6 +6,20 @@ function getTodayString() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function sortTasks(a, b) {
+    if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+    }
+    const aEnd = a.endTime ? new Date(a.endTime) : new Date('9999-12-31');
+    const bEnd = b.endTime ? new Date(b.endTime) : new Date('9999-12-31');
+    if (aEnd.getTime() !== bEnd.getTime()) {
+        return aEnd.getTime() - bEnd.getTime();
+    }
+    const aCreated = new Date(a.createdAt || 0);
+    const bCreated = new Date(b.createdAt || 0);
+    return bCreated.getTime() - aCreated.getTime();
+}
+
 function render() {
     const datePicker = document.getElementById('date-picker');
     if (datePicker && !datePicker.value) {
@@ -78,35 +92,14 @@ function renderHomePage() {
         .filter(t => t.taskDate === selectedDate && !t.movedToHistory)
         .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
                    (t.description && t.description.toLowerCase().includes(searchQuery)))
-        .sort((a, b) => a.order - b.order);
+        .sort(sortTasks);
 
-    const isToday = selectedDate === getTodayString();
     const dateStr = formatDateDisplay(selectedDate);
 
     const completedCount = todayTasks.filter(t => t.completed).length;
     const totalCount = todayTasks.length;
 
-    const undatedTasks = tasks
-        .filter(t => !t.taskDate && !t.movedToHistory)
-        .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
-                   (t.description && t.description.toLowerCase().includes(searchQuery)))
-        .sort((a, b) => a.order - b.order);
-    
-    let undatedHtml = '';
-    if (undatedTasks.length > 0) {
-        const undatedCompleted = undatedTasks.filter(t => t.completed).length;
-        undatedHtml = `
-            <div class="undated-section">
-                <div class="undated-header">
-                    <h3>📋 未安排日期</h3>
-                    <span class="undated-count">(${undatedCompleted}/${undatedTasks.length})</span>
-                </div>
-                ${undatedTasks.map(task => renderTaskCard(task)).join('')}
-            </div>
-        `;
-    }
-
-    if (todayTasks.length === 0 && undatedTasks.length === 0) {
+    if (todayTasks.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">${searchQuery ? '🔍' : '🎉'}</div>
@@ -117,20 +110,16 @@ function renderHomePage() {
     }
     
     container.innerHTML = `
-        ${todayTasks.length > 0 ? `
-            <div class="daily-stats">
-                <span class="daily-stat-item">
-                    <strong>${completedCount}/${totalCount}</strong> 已完成
-                </span>
-                <span class="daily-stat-item">
-                    <strong>${totalCount - completedCount}</strong> 待完成
-                </span>
-            </div>
-            ${todayTasks.map(task => renderTaskCard(task)).join('')}
-        ` : ''}
-        ${undatedHtml}
+        <div class="daily-stats">
+            <span class="daily-stat-item">
+                <strong>${completedCount}/${totalCount}</strong> 已完成
+            </span>
+            <span class="daily-stat-item">
+                <strong>${totalCount - completedCount}</strong> 待完成
+            </span>
+        </div>
+        ${todayTasks.map(task => renderTaskCard(task)).join('')}
     `;
-    setupTaskDrag(container);
 }
 
 function formatDateDisplay(dateStr) {
@@ -156,7 +145,7 @@ function renderTaskCard(task) {
 
     return `
         <div class="task-card ${task.completed ? 'completed' : ''}" 
-             data-task-id="${task.id}" draggable="true">
+             data-task-id="${task.id}">
             <div class="task-header">
                 <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
                      onclick="toggleTask('${task.id}')"></div>
@@ -193,7 +182,7 @@ function renderGroupsPage() {
     
     const sortedGroups = [...taskGroups]
         .filter(group => !group.movedToHistory)
-        .sort((a, b) => a.order - b.order);
+        .sort(sortTasks);
 
     const filteredGroups = sortedGroups.filter(group => {
         if (searchQuery === '') return true;
@@ -218,12 +207,12 @@ function renderGroupsPage() {
             .filter(t => t.groupId === group.id && !t.movedToHistory)
             .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
                        (t.description && t.description.toLowerCase().includes(searchQuery)))
-            .sort((a, b) => a.order - b.order);
+            .sort(sortTasks);
         const isCollapsed = group.collapsed !== false;
         const allGroupTasks = tasks.filter(t => t.groupId === group.id && !t.movedToHistory);
         const completedCount = allGroupTasks.filter(t => t.completed).length;
         return `
-            <div class="group-card ${isCollapsed ? 'collapsed' : ''}" data-group-id="${group.id}" draggable="true">
+            <div class="group-card ${isCollapsed ? 'collapsed' : ''}" data-group-id="${group.id}">
                 <div class="group-header" onclick="toggleGroupCollapse('${group.id}')">
                     <div class="group-title-wrapper">
                         <span class="collapse-icon">▼</span>
@@ -252,9 +241,6 @@ function renderGroupsPage() {
     }).join('');
 
     setupGroupDrag(container);
-    container.querySelectorAll('.group-tasks').forEach(el => {
-        setupTaskDrag(el);
-    });
 }
 
 function renderHistoryPage() {
@@ -320,7 +306,7 @@ function renderHistoryPage() {
         const groupTasks = allGroupTasks
             .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
                        (t.description && t.description.toLowerCase().includes(searchQuery)))
-            .sort((a, b) => new Date(b.endTime || b.createdAt) - new Date(a.endTime || a.createdAt));
+            .sort(sortTasks);
         const completedCount = allGroupTasks.filter(t => t.completed).length;
         return `
             <div class="group-card collapsed" data-group-id="${groupId}">
@@ -380,10 +366,6 @@ function toggleGroupCollapse(groupId) {
         group.collapsed = !group.collapsed;
         saveData();
         renderGroupsPage();
-        const container = document.getElementById('groups-list');
-        container.querySelectorAll('.group-tasks').forEach(el => {
-            setupTaskDrag(el);
-        });
     }
 }
 

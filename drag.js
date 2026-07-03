@@ -1,7 +1,4 @@
 let draggedItem = null;
-let touchStartX = 0;
-let touchStartY = 0;
-let touchDragging = false;
 
 function setupTaskDrag(container) {
     const taskCards = container.querySelectorAll('.task-card');
@@ -10,9 +7,6 @@ function setupTaskDrag(container) {
         card.addEventListener('dragend', handleTaskDragEnd);
         card.addEventListener('dragover', handleTaskDragOver);
         card.addEventListener('drop', handleTaskDrop);
-        card.addEventListener('touchstart', handleTouchStart, { passive: false });
-        card.addEventListener('touchmove', handleTouchMove, { passive: false });
-        card.addEventListener('touchend', handleTouchEnd);
     });
 }
 
@@ -23,9 +17,6 @@ function setupGroupDrag(container) {
         card.addEventListener('dragend', handleGroupDragEnd);
         card.addEventListener('dragover', handleGroupDragOver);
         card.addEventListener('drop', handleGroupDrop);
-        card.addEventListener('touchstart', handleTouchStart, { passive: false });
-        card.addEventListener('touchmove', handleTouchMove, { passive: false });
-        card.addEventListener('touchend', handleTouchEnd);
     });
 }
 
@@ -121,31 +112,4 @@ function handleGroupDrop(e) {
     });
     saveData();
     render();
-}
-
-function handleTouchStart(e) {
-    if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchDragging = false;
-}
-
-function handleTouchMove(e) {
-    if (e.touches.length !== 1) return;
-    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-    if (deltaX > 10 && deltaX > deltaY * 1.5) {
-        touchDragging = true;
-        e.preventDefault();
-    }
-}
-
-function handleTouchEnd(e) {
-    if (touchDragging) {
-        touchDragging = false;
-        const card = e.target.closest('.task-card, .group-card');
-        if (card) {
-            card.classList.remove('dragging');
-        }
-    }
 }

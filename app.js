@@ -76,8 +76,14 @@ function checkDailyRefresh() {
         const tasks = getTasks();
         tasks.forEach(task => {
             const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
-            if (repeatType === 'daily' && task.completed) {
-                task.completed = false;
+            if (!task.completed && task.taskDate) {
+                const taskDate = new Date(task.taskDate);
+                const todayStart = new Date(todayDateStr);
+                if (taskDate < todayStart) {
+                    task.taskDate = todayDateStr;
+                }
+            }
+            if (repeatType === 'daily' && !task.completed) {
                 task.taskDate = todayDateStr;
             }
         });
@@ -93,8 +99,7 @@ function checkDailyRefresh() {
             const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
             if (repeatType === 'weekly') {
                 const repeatDays = task.repeatDays || ['mon'];
-                if (repeatDays.includes(currentDayKey)) {
-                    task.completed = false;
+                if (repeatDays.includes(currentDayKey) && !task.completed) {
                     task.taskDate = todayDateStr;
                 }
             }

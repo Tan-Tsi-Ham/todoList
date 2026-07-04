@@ -129,65 +129,64 @@
                         <select class="form-select" id="task-group" required></select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">任务日期</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="date" class="form-input" id="task-date">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="clearTaskDate()" title="清除日期">清除</button>
-                        </div>
-                        <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px;">不设置日期则显示在「未安排日期」区域</div>
-                    </div>
-                    <div class="form-group">
                         <label class="form-label">截止时间</label>
                         <input type="datetime-local" class="form-input" id="task-end">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">重复周期</label>
-                        <div style="display: flex; gap: 16px;">
+                        <label class="form-label">时间安排</label>
+                        <div style="display: flex; gap: 16px; align-items: center;">
                             <label class="form-checkbox">
-                                <input type="radio" name="task-repeat" value="none" checked onchange="toggleWeeklyDays()">
+                                <input type="radio" name="task-repeat" value="none" checked onchange="toggleRepeatMode()">
                                 <span>不重复</span>
                             </label>
                             <label class="form-checkbox">
-                                <input type="radio" name="task-repeat" value="daily" onchange="toggleWeeklyDays()">
+                                <input type="radio" name="task-repeat" value="daily" onchange="toggleRepeatMode()">
                                 <span>每日重复</span>
                             </label>
                             <label class="form-checkbox">
-                                <input type="radio" name="task-repeat" value="weekly" onchange="toggleWeeklyDays()">
+                                <input type="radio" name="task-repeat" value="weekly" onchange="toggleRepeatMode()">
                                 <span>每周重复</span>
                             </label>
                         </div>
-                    </div>
-                    <div class="form-group" id="weekly-days-group" style="display: none;">
-                        <label class="form-label">选择重复的星期（可多选）</label>
-                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-mon" value="1">
-                                <span>周一</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-tue" value="2">
-                                <span>周二</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-wed" value="3">
-                                <span>周三</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-thu" value="4">
-                                <span>周四</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-fri" value="5">
-                                <span>周五</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-sat" value="6">
-                                <span>周六</span>
-                            </label>
-                            <label class="form-checkbox">
-                                <input type="checkbox" id="task-repeat-sun" value="0">
-                                <span>周日</span>
-                            </label>
+                        <div id="task-date-wrapper" style="margin-top: 12px;">
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="form-input" id="task-date">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="clearTaskDate()" title="清除日期">清除</button>
+                            </div>
+                            <div style="font-size: 12px; color: var(--gray-400); margin-top: 4px;">不设置日期则显示在「未安排日期」区域</div>
+                        </div>
+                        <div class="form-group" id="weekly-days-group" style="display: none; margin-top: 12px;">
+                            <label class="form-label" style="font-weight: 500;">选择重复的星期（可多选）</label>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-mon" value="1">
+                                    <span>周一</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-tue" value="2">
+                                    <span>周二</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-wed" value="3">
+                                    <span>周三</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-thu" value="4">
+                                    <span>周四</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-fri" value="5">
+                                    <span>周五</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-sat" value="6">
+                                    <span>周六</span>
+                                </label>
+                                <label class="form-checkbox">
+                                    <input type="checkbox" id="task-repeat-sun" value="0">
+                                    <span>周日</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                     

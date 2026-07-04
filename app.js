@@ -75,38 +75,22 @@ function checkDailyRefresh() {
     if (lastRefresh !== todayStr) {
         const tasks = getTasks();
         tasks.forEach(task => {
-            const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
+            if (!task.completedDates) {
+                task.completedDates = [];
+            }
             if (!task.completed && task.taskDate) {
                 const taskDate = new Date(task.taskDate);
                 const todayStart = new Date(todayDateStr);
-                if (taskDate < todayStart) {
+                if (taskDate < todayStart && !task.repeatType) {
                     task.taskDate = todayDateStr;
                 }
-            }
-            if (repeatType === 'daily' && !task.completed) {
-                task.taskDate = todayDateStr;
             }
         });
         saveData();
         localStorage.setItem('lastDailyRefresh', todayStr);
     }
 
-    const lastWeeklyRefreshDate = localStorage.getItem('lastWeeklyRefreshDate');
-
-    if (lastWeeklyRefreshDate !== todayStr) {
-        const tasks = getTasks();
-        tasks.forEach(task => {
-            const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
-            if (repeatType === 'weekly') {
-                const repeatDays = task.repeatDays || ['mon'];
-                if (repeatDays.includes(currentDayKey) && !task.completed) {
-                    task.taskDate = todayDateStr;
-                }
-            }
-        });
-        saveData();
-        localStorage.setItem('lastWeeklyRefreshDate', todayStr);
-    }
+    localStorage.setItem('lastWeeklyRefreshDate', todayStr);
 }
 
 function exportData() {
@@ -135,10 +119,14 @@ function saveTask() {
     const title = document.getElementById('task-title').value.trim();
     const description = document.getElementById('task-description').value.trim();
     const groupId = document.getElementById('task-group').value;
-    const taskDate = document.getElementById('task-date').value || null;
     const endTime = document.getElementById('task-end').value;
     const repeatType = document.querySelector('input[name="task-repeat"]:checked').value;
     const taskId = editingTaskId;
+
+    let taskDate = document.getElementById('task-date').value || null;
+    if (repeatType !== 'none') {
+        taskDate = taskDate || getTodayDateString();
+    }
 
     let repeatDays = [];
     if (repeatType === 'weekly') {
@@ -171,6 +159,9 @@ function saveTask() {
             task.endTime = endTime ? new Date(endTime).toISOString() : null;
             task.repeatType = repeatType;
             task.repeatDays = repeatDays.length > 0 ? repeatDays : undefined;
+            if (!task.completedDates) {
+                task.completedDates = [];
+            }
             delete task.dailyRefresh;
             delete task.dependsOnPrev;
         }
@@ -186,6 +177,7 @@ function saveTask() {
             repeatType,
             repeatDays: repeatDays.length > 0 ? repeatDays : undefined,
             completed: false,
+            completedDates: [],
             order: maxOrder + 1,
             createdAt: new Date().toISOString()
         });
@@ -238,8 +230,27 @@ function toggleTask(taskId) {
     const tasks = getTasks();
     const task = tasks.find(t => t.id === taskId);
     if (task) {
-        task.completed = !task.completed;
-        if (!task.completed && task.movedToHistory) {
+        const todayStr = getTodayDateString();
+        if (!task.completedDates) {
+            task.completedDates = [];
+        }
+        
+        if (task.repeatType && task.repeatType !== 'none') {
+            const dateIndex = task.completedDates.indexOf(todayStr);
+            if (dateIndex >= 0) {
+                task.completedDates.splice(dateIndex, 1);
+            } else {
+                task.completedDates.push(todayStr);
+            }
+        } else {
+            task.completed = !task.completed;
+        }
+        
+        const isCompletedToday = task.repeatType && task.repeatType !== 'none' 
+            ? task.completedDates.includes(todayStr)
+            : task.completed;
+        
+        if (!isCompletedToday && task.movedToHistory) {
             task.movedToHistory = false;
         }
         saveData();

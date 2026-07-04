@@ -83,20 +83,59 @@ function resetToToday() {
     renderHomePage();
 }
 
+function isTaskVisibleOnDate(task, dateStr) {
+    if (!task.taskDate) {
+        return false;
+    }
+    
+    const repeatType = task.repeatType || (task.dailyRefresh ? 'daily' : 'none');
+    
+    if (repeatType === 'none') {
+        return task.taskDate === dateStr;
+    }
+    
+    if (repeatType === 'daily') {
+        return dateStr >= task.taskDate;
+    }
+    
+    if (repeatType === 'weekly') {
+        const repeatDays = task.repeatDays || [];
+        if (repeatDays.length === 0) {
+            return false;
+        }
+        
+        if (dateStr < task.taskDate) {
+            return false;
+        }
+        
+        const targetDate = new Date(dateStr);
+        const dayMap = { 0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat' };
+        const targetDay = dayMap[targetDate.getDay()];
+        return repeatDays.includes(targetDay);
+    }
+    
+    return false;
+}
+
 function renderHomePage() {
     const container = document.getElementById('home-tasks');
     const searchQuery = document.getElementById('home-search')?.value.toLowerCase() || '';
     const tasks = getTasks();
     
     const todayTasks = tasks
-        .filter(t => t.taskDate === selectedDate && !t.movedToHistory)
+        .filter(t => isTaskVisibleOnDate(t, selectedDate) && !t.movedToHistory)
         .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
                    (t.description && t.description.toLowerCase().includes(searchQuery)))
         .sort(sortTasks);
 
     const dateStr = formatDateDisplay(selectedDate);
 
-    const completedCount = todayTasks.filter(t => t.completed).length;
+    const completedCount = todayTasks.filter(t => {
+        if (t.repeatType && t.repeatType !== 'none') {
+            return (t.completedDates || []).includes(selectedDate);
+        }
+        return t.completed;
+    }).length;
     const totalCount = todayTasks.length;
 
     if (todayTasks.length === 0) {
@@ -141,13 +180,18 @@ function formatDateDisplay(dateStr) {
 function renderTaskCard(task) {
     const taskGroups = getTaskGroups();
     const group = taskGroups.find(g => g.id === task.groupId);
-    const isOverdue = task.endTime && new Date(task.endTime) < new Date() && !task.completed;
+    
+    const isCompletedToday = task.repeatType && task.repeatType !== 'none' 
+        ? (task.completedDates || []).includes(selectedDate)
+        : task.completed;
+        
+    const isOverdue = task.endTime && new Date(task.endTime) < new Date() && !isCompletedToday;
 
     return `
-        <div class="task-card ${task.completed ? 'completed' : ''}" 
+        <div class="task-card ${isCompletedToday ? 'completed' : ''}" 
              data-task-id="${task.id}">
             <div class="task-header">
-                <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                <div class="task-checkbox ${isCompletedToday ? 'checked' : ''}" 
                      onclick="toggleTask('${task.id}')"></div>
                 <div class="task-content">
                     <div class="task-title">${escapeHtml(task.title)}</div>
@@ -156,6 +200,11 @@ function renderTaskCard(task) {
                         <span class="task-meta-item">
                             <span class="task-group-tag">${escapeHtml(group?.name || '未分组')}</span>
                         </span>
+                        ${task.repeatType && task.repeatType !== 'none' ? `
+                            <span class="task-meta-item">
+                                <span class="task-repeat-tag">🔄 ${task.repeatType === 'daily' ? '每日重复' : '每周重复'}</span>
+                            </span>
+                        ` : ''}
                         ${task.endTime ? `
                             <span class="task-due ${isOverdue ? 'overdue' : ''}">
                                 ⏰ ${formatDateTime(task.endTime)}
@@ -166,7 +215,7 @@ function renderTaskCard(task) {
                 <div class="task-actions">
                     <button class="btn btn-icon" onclick="openTaskModal('${task.id}')">✏️</button>
                     ${task.taskDate ? `${task.taskDate ? `<span class="task-date-tag">📅 ${task.taskDate}</span>` : '<span class="task-date-tag">📅 未安排</span>'}` : '<span class="task-date-tag">📅 未安排</span>'}
-                    ${task.completed ? `<button class="btn btn-icon" onclick="moveToHistory('${task.id}')" title="移入历史">📜</button>` : ''}
+                    ${isCompletedToday ? `<button class="btn btn-icon" onclick="moveToHistory('${task.id}')" title="移入历史">📜</button>` : ''}
                     <button class="btn btn-icon danger" onclick="deleteTask('${task.id}')">🗑️</button>
                 </div>
             </div>
@@ -210,7 +259,12 @@ function renderGroupsPage() {
             .sort(sortTasks);
         const isCollapsed = group.collapsed !== false;
         const allGroupTasks = tasks.filter(t => t.groupId === group.id && !t.movedToHistory);
-        const completedCount = allGroupTasks.filter(t => t.completed).length;
+        const completedCount = allGroupTasks.filter(t => {
+            if (t.repeatType && t.repeatType !== 'none') {
+                return (t.completedDates || []).includes(selectedDate);
+            }
+            return t.completed;
+        }).length;
         return `
             <div class="group-card ${isCollapsed ? 'collapsed' : ''}" data-group-id="${group.id}">
                 <div class="group-header" onclick="toggleGroupCollapse('${group.id}')">
@@ -253,7 +307,10 @@ function renderHistoryPage() {
     const historyTasks = tasks
         .filter(t => {
             const group = t.groupId ? taskGroups.find(g => g.id === t.groupId) : null;
-            return (t.endTime && new Date(t.endTime) < now && !t.completed) || 
+            const isCompletedToday = t.repeatType && t.repeatType !== 'none' 
+                ? (t.completedDates || []).includes(selectedDate)
+                : t.completed;
+            return (t.endTime && new Date(t.endTime) < now && !isCompletedToday) || 
                    t.movedToHistory || 
                    (group && group.movedToHistory);
         })
@@ -307,7 +364,12 @@ function renderHistoryPage() {
             .filter(t => searchQuery === '' || t.title.toLowerCase().includes(searchQuery) || 
                        (t.description && t.description.toLowerCase().includes(searchQuery)))
             .sort(sortTasks);
-        const completedCount = allGroupTasks.filter(t => t.completed).length;
+        const completedCount = allGroupTasks.filter(t => {
+            if (t.repeatType && t.repeatType !== 'none') {
+                return (t.completedDates || []).includes(selectedDate);
+            }
+            return t.completed;
+        }).length;
         return `
             <div class="group-card collapsed" data-group-id="${groupId}">
                 <div class="group-header" onclick="toggleHistoryGroupCollapse('${groupId}')">
@@ -324,34 +386,39 @@ function renderHistoryPage() {
                 </div>
                 ${group && group.description ? `<div class="group-description">${escapeHtml(group.description)}</div>` : ''}
                 <div class="group-tasks" data-group-id="${groupId}">
-                    ${groupTasks.map(task => `
-                        <div class="task-card ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
-                            <div class="task-header">
-                                <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
-                                     onclick="toggleTask('${task.id}')"></div>
-                                <div class="task-content">
-                                    <div class="task-title">${escapeHtml(task.title)}</div>
-                                    ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
-                                    <div class="task-meta">
-                                        ${task.endTime ? `
-                                            <span class="task-due">
-                                                ⏰ ${formatDateTime(task.endTime)}
-                                            </span>
-                                        ` : ''}
-                                        ${task.completed && task.movedToHistory ? `
-                                            <span class="task-meta-item">📜 已移入历史</span>
-                                        ` : ''}
+                    ${groupTasks.map(task => {
+                        const isCompletedToday = task.repeatType && task.repeatType !== 'none' 
+                            ? (task.completedDates || []).includes(selectedDate)
+                            : task.completed;
+                        return `
+                            <div class="task-card ${isCompletedToday ? 'completed' : ''}" data-task-id="${task.id}">
+                                <div class="task-header">
+                                    <div class="task-checkbox ${isCompletedToday ? 'checked' : ''}" 
+                                         onclick="toggleTask('${task.id}')"></div>
+                                    <div class="task-content">
+                                        <div class="task-title">${escapeHtml(task.title)}</div>
+                                        ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
+                                        <div class="task-meta">
+                                            ${task.endTime ? `
+                                                <span class="task-due">
+                                                    ⏰ ${formatDateTime(task.endTime)}
+                                                </span>
+                                            ` : ''}
+                                            ${task.completed && task.movedToHistory ? `
+                                                <span class="task-meta-item">📜 已移入历史</span>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="task-actions">
+                                        <button class="btn btn-icon" onclick="openTaskModal('${task.id}')">✏️</button>
+                                        ${task.taskDate ? `<span class="task-date-tag">📅 ${task.taskDate}</span>` : '<span class="task-date-tag">📅 未安排</span>'}
+                                        <button class="btn btn-icon" onclick="moveOutOfHistory('${task.id}')" title="移出历史">↩️</button>
+                                        <button class="btn btn-icon danger" onclick="deleteTask('${task.id}')">🗑️</button>
                                     </div>
                                 </div>
-                                <div class="task-actions">
-                                    <button class="btn btn-icon" onclick="openTaskModal('${task.id}')">✏️</button>
-                                    ${task.taskDate ? `<span class="task-date-tag">📅 ${task.taskDate}</span>` : '<span class="task-date-tag">📅 未安排</span>'}
-                                    <button class="btn btn-icon" onclick="moveOutOfHistory('${task.id}')" title="移出历史">↩️</button>
-                                    <button class="btn btn-icon danger" onclick="deleteTask('${task.id}')">🗑️</button>
-                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;

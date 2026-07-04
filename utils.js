@@ -36,9 +36,3 @@ function formatLocalDateTime(isoString) {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
-
-function toggleWeeklyDays() {
-    const repeatType = document.querySelector('input[name="task-repeat"]:checked').value;
-    const weeklyDaysGroup = document.getElementById('weekly-days-group');
-    weeklyDaysGroup.style.display = repeatType === 'weekly' ? 'block' : 'none';
-}

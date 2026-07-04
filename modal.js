@@ -48,7 +48,7 @@ function openTaskModal(taskId = null, groupId = null) {
             document.getElementById('task-group').value = groupId;
         }
     }
-    toggleWeeklyDays();
+    toggleRepeatMode();
     modal.classList.add('active');
 }
 
@@ -59,6 +59,29 @@ function closeTaskModal() {
 
 function clearTaskDate() {
     document.getElementById('task-date').value = '';
+}
+
+function toggleRepeatMode() {
+    const repeatType = document.querySelector('input[name="task-repeat"]:checked').value;
+    const dateWrapper = document.getElementById('task-date-wrapper');
+    const dateInput = document.getElementById('task-date');
+    const weeklyDaysGroup = document.getElementById('weekly-days-group');
+
+    if (repeatType === 'none') {
+        dateWrapper.style.display = 'block';
+        dateInput.disabled = false;
+        weeklyDaysGroup.style.display = 'none';
+    } else if (repeatType === 'daily') {
+        dateWrapper.style.display = 'none';
+        dateInput.disabled = true;
+        weeklyDaysGroup.style.display = 'none';
+        dateInput.value = getTodayDateString();
+    } else if (repeatType === 'weekly') {
+        dateWrapper.style.display = 'none';
+        dateInput.disabled = true;
+        weeklyDaysGroup.style.display = 'block';
+        dateInput.value = getTodayDateString();
+    }
 }
 
 function openGroupModal(groupId = null) {

@@ -405,6 +405,15 @@ body {
     font-weight: 500;
 }
 
+.task-repeat-tag {
+    background: var(--success-light);
+    color: var(--success);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 12px;
+}
+
 .task-date-tag {
     font-size: 12px;
     color: var(--gray-400);
